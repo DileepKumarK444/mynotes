@@ -2,7 +2,18 @@
 
 A OneNote-inspired note-taking app: notebooks → sections → pages, rich text (TipTap), checklists, tables, images, full-text search, light/dark themes. React 19 + TypeScript + Vite on the front end, Supabase (Auth, Postgres, Storage) as the backend.
 
-Without Supabase configured the app still runs in **local demo mode** (notes live in your browser only).
+## Local-only use (default)
+
+No account, no cloud. With no `.env.local`, the app runs entirely on your computer and saves to `data/notes.json` in this folder (with a one-step `notes.json.bak`).
+
+```bash
+npm install     # first time only
+npm start       # builds and serves at http://127.0.0.1:4173
+```
+
+Keep a copy of `data/notes.json` (or use Settings → Export) as your backup. The server only listens on 127.0.0.1.
+
+Cloud sync below is optional and only activates when Supabase keys are present.
 
 ## Run locally
 

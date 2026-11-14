@@ -9,11 +9,10 @@ interface Props {
   onClose: () => void
   onTheme: (t: 'light' | 'dark') => void
   onSignOut: () => void
-  onSignIn: () => void
   onReset: () => void
 }
 
-export function SettingsDialog({ state, mode, email, onClose, onTheme, onSignOut, onSignIn, onReset }: Props) {
+export function SettingsDialog({ state, mode, email, onClose, onTheme, onSignOut, onReset }: Props) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', h)
@@ -50,18 +49,15 @@ export function SettingsDialog({ state, mode, email, onClose, onTheme, onSignOut
               <button className="btn" onClick={onSignOut}><LogOut size={15} /> Sign out</button>
             </>
           ) : (
-            <>
-              <p className="muted">You are in local demo mode: notes stay in this browser and are not backed up.</p>
-              <button className="btn primary-ghost" onClick={onSignIn}>Sign in to sync</button>
-            </>
+            <p className="muted">Local-only mode: notes are saved to <code>data/notes.json</code> inside the MyNotes folder on this computer. Nothing is sent anywhere. Back that file up, or use Export below, to keep a copy.</p>
           )}
         </section>
         <section>
           <h3>Your data</h3>
           <button className="btn" onClick={exportJson}><Download size={15} /> Export everything (JSON)</button>
           {mode === 'demo' && (
-            <button className="btn danger" onClick={() => { if (confirm('Reset all demo notes to the original sample data?')) { onReset(); onClose() } }}>
-              <RotateCcw size={15} /> Reset demo data
+            <button className="btn danger" onClick={() => { if (confirm('Erase all notes and restore the sample notebooks? This cannot be undone.')) { onReset(); onClose() } }}>
+              <RotateCcw size={15} /> Reset to sample data
             </button>
           )}
         </section>

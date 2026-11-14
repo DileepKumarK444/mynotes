@@ -7,7 +7,7 @@ import { Workspace } from './components/Workspace'
 import { loadAll, searchPages, uploadImage as uploadCloudImage, type Data } from './lib/backend'
 import { hasSupabase, supabase } from './lib/supabase'
 import { useSync } from './lib/useSync'
-import { loadDemo, starterState, useNotes, withSavedSelection } from './store'
+import { loadDemo, loadLocal, starterState, useNotes, withSavedSelection } from './store'
 import type { State } from './types'
 
 const MODE_KEY = 'mynotes-mode'
@@ -67,12 +67,14 @@ interface NotesProps {
   mode: 'demo' | 'cloud'
   session?: Session
   onSignOut: () => void
-  onSignIn?: () => void
 }
 
-function Notes({ initial, baseline, mode, session, onSignOut, onSignIn }: NotesProps) {
-  const [state, dispatch] = useNotes(initial, mode, session?.user.id)
-  const sync = useSync(state, baseline, mode === 'cloud')
+function Notes({ initial, baseline, mode, session, onSignOut }: NotesProps) {
+  const [state, dispatch, local] = useNotes(initial, mode, session?.user.id)
+  const cloudSync = useSync(state, baseline, mode === 'cloud')
+  const sync = mode === 'cloud'
+    ? cloudSync
+    : { status: local.status === 'error' ? 'error' as const : 'idle' as const, lastError: local.error, retry: async () => local.retry() }
   const mobile = useIsMobile()
   const [hidden, setHidden] = useState(false)
   const [drawerRaw, setDrawer] = useState(false)
@@ -86,7 +88,7 @@ function Notes({ initial, baseline, mode, session, onSignOut, onSignIn }: NotesP
   const uploadImage = useCallback(async (file: File) => {
     if (mode === 'cloud' && userId) return uploadCloudImage(userId, file)
     if (!file.type.startsWith('image/')) throw new Error('Only image files can be inserted')
-    if (file.size > 1_500_000) throw new Error('Demo mode keeps images in the browser: please use an image under 1.5 MB')
+    if (file.size > 5_000_000) throw new Error('Please use an image under 5 MB')
     return new Promise<string>((res, rej) => {
       const r = new FileReader()
       r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error('Could not read the image'))
@@ -97,7 +99,7 @@ function Notes({ initial, baseline, mode, session, onSignOut, onSignIn }: NotesP
   const email = session?.user.email ?? undefined
   const account = useMemo(() => mode === 'cloud'
     ? { label: (session?.user.user_metadata?.display_name as string | undefined) ?? email?.split('@')[0] ?? 'Account', sub: email ?? '', initials: (email ?? '?').slice(0, 2).toUpperCase() }
-    : { label: 'Demo mode', sub: 'Stored in this browser', initials: 'DM' }, [mode, email, session])
+    : { label: 'Local notebook', sub: 'Saved on this computer', initials: 'ME' }, [mode, email, session])
 
   return (
     <div className={`app ${hidden ? 'c1' : ''} ${drawer ? 'drawer-open' : ''}`}>
@@ -129,7 +131,6 @@ function Notes({ initial, baseline, mode, session, onSignOut, onSignIn }: NotesP
           onClose={() => setSettings(false)}
           onTheme={(theme) => dispatch({ t: 'theme', theme })}
           onSignOut={onSignOut}
-          onSignIn={() => onSignIn?.()}
           onReset={() => dispatch({ t: 'reset' })}
         />
       )}
@@ -137,7 +138,20 @@ function Notes({ initial, baseline, mode, session, onSignOut, onSignIn }: NotesP
   )
 }
 
+/** Local-only mode: loads notes from the file on this computer. */
+function LocalGate() {
+  const [initial, setInitial] = useState<State | null>(null)
+  useEffect(() => { void loadLocal().then(setInitial) }, [])
+  if (!initial) return <div className="boot" role="status">Loading your notes…</div>
+  return <Notes initial={initial} baseline={{ notebooks: [], sections: [], pages: [] }} mode="demo" onSignOut={() => {}} />
+}
+
 export default function App() {
+  if (!hasSupabase) return <LocalGate />
+  return <CloudApp />
+}
+
+function CloudApp() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!hasSupabase)
   const [demo, setDemo] = useState(readDemoFlag)
@@ -163,6 +177,6 @@ export default function App() {
 
   if (!ready) return <div className="boot" role="status">Loading…</div>
   if (session) return <CloudGate key={session.user.id} session={session} onSignOut={signOut} />
-  if (demo) return <Notes initial={demoInitial} baseline={{ notebooks: [], sections: [], pages: [] }} mode="demo" onSignOut={signOut} onSignIn={() => setMode(false)} />
+  if (demo) return <Notes initial={demoInitial} baseline={{ notebooks: [], sections: [], pages: [] }} mode="demo" onSignOut={signOut} />
   return <Auth onDemo={() => setMode(true)} />
 }

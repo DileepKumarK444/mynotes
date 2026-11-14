@@ -78,7 +78,7 @@ export function Workspace({ state, dispatch, page, sidebarHidden, onExpand, mode
   const saveLabel = sync.status === 'error'
     ? <button className="save-err" onClick={sync.retry} title={sync.error}><CloudOff size={14} /> Not saved · Retry</button>
     : busy ? <><Loader size={14} className="spin" /> Saving…</>
-    : <><CloudCheck size={15} /> {mode === 'cloud' ? 'Saved to cloud' : 'Saved locally'}</>
+    : <><CloudCheck size={15} /> {mode === 'cloud' ? 'Saved to cloud' : 'Saved on this computer'}</>
 
   return (
     <main className="col3">
@@ -91,7 +91,7 @@ export function Workspace({ state, dispatch, page, sidebarHidden, onExpand, mode
         </div>
         <div className="grow" />
         <div className={`save ${sync.status === 'error' ? 'err' : busy ? 'saving' : 'saved'}`} role="status" aria-live="polite"
-          title={mode === 'cloud' ? 'Changes sync automatically to your account' : 'Demo mode: notes are stored in this browser only'}>
+          title={mode === 'cloud' ? 'Changes sync automatically to your account' : 'Notes are saved to a file on this computer (data/notes.json)'}>
           {saveLabel}
         </div>
         <button className={`icon-btn ${page.fav ? 'fav-on' : ''}`} aria-pressed={page.fav} aria-label={page.fav ? 'Remove from favourites' : 'Add to favourites'}

@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { uuid } from './lib/ids'
 import { seed } from './seed'
 import type { IconKey, State, Theme } from './types'
@@ -144,15 +144,36 @@ export function loadDemo(): State {
   return { ...seed(), theme: initialTheme() }
 }
 
+/** Local mode: the file written by the dev/preview server wins; falls back to the browser copy, then a fresh start. */
+export async function loadLocal(): Promise<State> {
+  try {
+    const r = await fetch('/api/local-state')
+    if (r.ok) return { ...((await r.json()) as State), theme: initialTheme() }
+  } catch { /* server route unavailable: use browser storage */ }
+  let browser: State | null = null
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (raw) browser = JSON.parse(raw) as State
+  } catch { /* ignore */ }
+  return { ...(browser ?? starterState(true)), theme: initialTheme() }
+}
+
+export async function saveLocal(state: State): Promise<void> {
+  const json = JSON.stringify(state)
+  try { localStorage.setItem(KEY, json) } catch { /* quota: the file below is the real store */ }
+  const r = await fetch('/api/local-state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: json })
+  if (!r.ok) throw new Error(`Could not write notes file (${r.status})`)
+}
+
 /** A sensible first notebook for brand-new cloud accounts. */
-export function starterState(): State {
+export function starterState(local = false): State {
   const nb = uuid(), sec = uuid(), pg = uuid()
   return {
     notebooks: [{ id: nb, name: 'My first notebook', color: '#7b2fbe', icon: 'book' }],
     sections: [{ id: sec, notebookId: nb, name: 'Getting started', color: '#7b2fbe' }],
     pages: [{
       id: pg, sectionId: sec, title: 'Welcome to MyNotes', fav: true, updated: Date.now(),
-      html: '<h2>Welcome</h2><p>This is your first page. Everything you write here syncs to your account.</p><ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>Create a notebook for something you care about</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>Try the formatting toolbar, tables and images</p></div></li></ul>',
+      html: '<h2>Welcome</h2><p>This is your first page. '+(local ? 'Everything you write is saved on this computer.' : 'Everything you write here syncs to your account.')+'</p><ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>Create a notebook for something you care about</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>Try the formatting toolbar, tables and images</p></div></li></ul>',
     }],
     notebookId: nb, sectionId: sec, pageId: pg, theme: initialTheme(),
   }
@@ -172,19 +193,24 @@ export function withSavedSelection(s: State, userId: string): State {
 
 export function useNotes(initial: State, mode: 'demo' | 'cloud', userId?: string) {
   const [state, dispatch] = useReducer(reducer, initial)
+  const [local, setLocal] = useState<{ status: 'idle' | 'error'; error: string }>({ status: 'idle', error: '' })
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     try { localStorage.setItem(THEME_KEY, state.theme) } catch { /* ignore */ }
   }, [state.theme])
   useEffect(() => {
     const t = setTimeout(() => {
-      try {
-        if (mode === 'demo') localStorage.setItem(KEY, JSON.stringify(state))
-        else if (userId) localStorage.setItem(uiKey(userId), JSON.stringify({ notebookId: state.notebookId, sectionId: state.sectionId, pageId: state.pageId }))
-      } catch { /* ignore */ }
-    }, 300)
+      if (mode === 'demo') {
+        if (state === initial && tick === 0) return
+        saveLocal(state).then(() => setLocal({ status: 'idle', error: '' }))
+          .catch((e: unknown) => setLocal({ status: 'error', error: e instanceof Error ? e.message : 'Save failed' }))
+      } else if (userId) {
+        try { localStorage.setItem(uiKey(userId), JSON.stringify({ notebookId: state.notebookId, sectionId: state.sectionId, pageId: state.pageId })) } catch { /* ignore */ }
+      }
+    }, 250)
     return () => clearTimeout(t)
-  }, [state, mode, userId])
-  return [state, dispatch] as const
+  }, [state, mode, userId, initial, tick])
+  return [state, dispatch, { ...local, retry: () => setTick((n) => n + 1) }] as const
 }
 
 export const textOf = (html: string) => {
