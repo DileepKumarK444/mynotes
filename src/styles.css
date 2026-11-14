@@ -372,3 +372,8 @@ h2, h3 { margin: 0; }
 .btn:hover { background: var(--hover); }
 .btn.danger { color: var(--danger); }
 .btn.primary-ghost { color: var(--accent); border-color: var(--accent); }
+
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; padding: 6px 6px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+.menu .sw { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 2px solid transparent; justify-content: center; }
+.menu .sw:hover:not(:disabled) { transform: scale(1.15); }
+.menu .sw.on { border-color: var(--surface); box-shadow: 0 0 0 2px var(--text-2); }

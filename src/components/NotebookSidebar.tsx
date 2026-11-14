@@ -191,7 +191,7 @@ export function NotebookSidebar({ state, dispatch, onCollapse, onPick, account, 
                     {editing !== nb.id && (
                       <>
                         <button className="icon-btn sm add" aria-label={`New section in ${nb.name}`} title="New section" onClick={() => addSection(nb.id)}><FolderPlus size={15} /></button>
-                        <RowMenu label={`Notebook options for ${nb.name}`} items={[
+                        <RowMenu label={`Notebook options for ${nb.name}`} color={{ value: nb.color, onPick: (c) => dispatch({ t: 'colorNotebook', id: nb.id, color: c }) }} items={[
                           { label: 'New section', icon: <FolderPlus size={14} />, onClick: () => addSection(nb.id) },
                           { label: 'Rename', icon: <Pencil size={14} />, onClick: () => setEditing(nb.id) },
                           { label: 'Delete notebook', icon: <Trash2 size={14} />, danger: true, disabled: state.notebooks.length <= 1,
@@ -226,7 +226,7 @@ export function NotebookSidebar({ state, dispatch, onCollapse, onPick, account, 
                               {editing !== s.id && (
                                 <>
                                   <button className="icon-btn sm add" aria-label={`New page in ${s.name}`} title="New page" onClick={() => addPage(s.id, nb.id)}><FilePlus2 size={15} /></button>
-                                  <RowMenu label={`Section options for ${s.name}`} items={[
+                                  <RowMenu label={`Section options for ${s.name}`} color={{ value: s.color, onPick: (c) => dispatch({ t: 'colorSection', id: s.id, color: c }) }} items={[
                                     { label: 'New page', icon: <FilePlus2 size={14} />, onClick: () => addPage(s.id, nb.id) },
                                     { label: 'Rename', icon: <Pencil size={14} />, onClick: () => setEditing(s.id) },
                                     { label: 'Delete section', icon: <Trash2 size={14} />, danger: true, disabled: secs.length <= 1,

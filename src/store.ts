@@ -15,6 +15,8 @@ export type Action =
   | { t: 'addNotebook'; id: string }
   | { t: 'renameNotebook'; id: string; name: string }
   | { t: 'deleteNotebook'; id: string }
+  | { t: 'colorNotebook'; id: string; color: string }
+  | { t: 'colorSection'; id: string; color: string }
   | { t: 'addSection'; id: string }
   | { t: 'renameSection'; id: string; name: string }
   | { t: 'deleteSection'; id: string }
@@ -66,6 +68,10 @@ function reducer(s: State, a: Action): State {
     }
     case 'renameNotebook':
       return { ...s, notebooks: s.notebooks.map((n) => (n.id === a.id ? { ...n, name: a.name.trim() || n.name } : n)) }
+    case 'colorNotebook':
+      return { ...s, notebooks: s.notebooks.map((n) => (n.id === a.id ? { ...n, color: a.color } : n)) }
+    case 'colorSection':
+      return { ...s, sections: s.sections.map((x) => (x.id === a.id ? { ...x, color: a.color } : x)) }
     case 'deleteNotebook': {
       if (s.notebooks.length <= 1) return s
       const secIds = s.sections.filter((x) => x.notebookId === a.id).map((x) => x.id)
